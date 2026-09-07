@@ -25,7 +25,9 @@ Route::get('warehouses', [WarehouseController::class, 'index']);
 Route::get('warehouses/{warehouse}', [WarehouseController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('orders', OrderController::class)->only(['index', 'store', 'show']);
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::get('orders/{order}', [OrderController::class, 'show']);
+    Route::post('orders', [OrderController::class, 'store'])->middleware('throttle:orders');
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
 
     Route::get('orders/{order}/payments', [PaymentController::class, 'index']);
@@ -33,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('payments/{payment}', [PaymentController::class, 'show']);
 
     Route::middleware('role:admin,staff')->group(function () {
+        Route::post('products/deactivate-stale', [ProductController::class, 'deactivateStale']);
         Route::apiResource('products', ProductController::class)->except(['index', 'show']);
         Route::apiResource('warehouses', WarehouseController::class)->except(['index', 'show']);
         Route::apiResource('inventories', InventoryController::class)->except(['destroy']);

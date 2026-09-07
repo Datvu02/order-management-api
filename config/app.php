@@ -20,4 +20,6 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+    'api_rate_limit' => (int) env('API_RATE_LIMIT', 60),
+    'order_rate_limit' => (int) env('ORDER_RATE_LIMIT', 10),
 ];

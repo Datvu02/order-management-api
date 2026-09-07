@@ -9,11 +9,14 @@ use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductCollection;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ProductService $productService) {}
+
     public function index(IndexProductRequest $request): ProductCollection
     {
         $filters = $request->filters();
@@ -62,5 +65,16 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->noContent();
+    }
+
+    public function deactivateStale(): JsonResponse
+    {
+        $count = $this->productService->deactivateStale(2);
+
+        return response()->json([
+            'data' => [
+                'deactivated' => $count,
+            ],
+        ], Response::HTTP_OK);
     }
 }
