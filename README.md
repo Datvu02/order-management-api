@@ -2,17 +2,37 @@
 
 Laravel 11 API-only cho hệ thống quản lý đơn hàng thương mại điện tử.
 
-## Yêu cầu
+## Chạy bằng Docker
 
-- PHP 8.2+
-- Composer
-- MySQL 8 (hoặc MariaDB 10.4+)
-- Extension: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`
-
-## Cài đặt
+Chỉ cần Docker Desktop, không cần cài PHP / Composer / MySQL trên máy.
 
 ```bash
 cd order-management-api
+copy .env.example .env
+docker compose build
+docker compose run --rm app composer install
+docker compose run --rm app php artisan key:generate
+docker compose up -d
+docker compose exec app php artisan migrate --seed
+```
+
+API chạy tại `http://127.0.0.1:8000/api`.
+
+Chạy test (dùng SQLite in-memory, không cần MySQL):
+
+```bash
+docker compose run --rm app php artisan test
+```
+
+Compose gồm 3 service: `app` (PHP 8.3 CLI), `mysql` (8.0), `redis` (7) cho rate limit. Biến `DB_HOST=mysql`, `REDIS_HOST=redis` được set trong `docker-compose.yml` nên không cần sửa `.env`.
+
+Dừng: `docker compose down` (thêm `-v` để xóa luôn dữ liệu MySQL).
+
+## Chạy trực tiếp trên máy
+
+Cần PHP 8.2+, Composer, MySQL 8 (hoặc MariaDB 10.4+), extension `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`.
+
+```bash
 composer install
 copy .env.example .env
 php artisan key:generate
@@ -33,8 +53,6 @@ DB_PASSWORD=
 php artisan migrate --seed
 php artisan serve
 ```
-
-API chạy tại `http://127.0.0.1:8000/api`.
 
 ## Tài khoản mẫu (sau `migrate --seed`)
 
@@ -169,5 +187,7 @@ routes/api.php
 ## Test
 
 ```bash
-php artisan test
+docker compose run --rm app php artisan test
 ```
+
+Hoặc `php artisan test` nếu chạy trực tiếp trên máy. Danh sách case: `docs/feature-and-unit-tests.md`.
