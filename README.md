@@ -196,4 +196,7 @@ routes/api.php
 docker compose run --rm app php artisan test
 ```
 
-Hoặc `php artisan test` nếu chạy trực tiếp trên máy. Danh sách case: `docs/feature-and-unit-tests.md`.
+Hoặc `php artisan test` nếu chạy trực tiếp trên máy. Hiện có 28 test / 118 assertions.
+
+- `docs/test-guide.md` — cách chạy test theo từng mục yêu cầu, kèm lệnh `--filter` và kết quả kỳ vọng.
+- `docs/feature-and-unit-tests.md` — danh sách case chi tiết.
