@@ -123,8 +123,12 @@ Thanh toán đủ (`payments.status = paid` và tổng ≥ `orders.total`) sẽ 
 curl -X POST http://127.0.0.1:8000/api/orders ^
   -H "Authorization: Bearer TOKEN" ^
   -H "Content-Type: application/json" ^
-  -d "{\"warehouse_id\":1,\"shipping_name\":\"Nguyen Van A\",\"shipping_phone\":\"0901234567\",\"shipping_address\":\"1 Nguyen Hue, Q1\",\"items\":[{\"product_id\":1,\"quantity\":2}]}"
+  -d "{\"warehouse_id\":1,\"shipping_name\":\"Nguyen Van A\",\"shipping_phone\":\"0901234567\",\"shipping_address\":\"1 Nguyen Hue, Q1\",\"items\":[{\"product_id\":1,\"quantity\":2}],\"payment\":{\"method\":\"cod\"}}"
 ```
+
+`GET /api/orders` trả `{ "data": [...], "meta": { "current_page", "per_page", "total", ... } }`. Filter: `status`, `warehouse_id`, `from`, `to`, `per_page`.
+
+Phân tích query ~5 triệu bản ghi: `docs/order-query-overload.md`.
 
 ### Ví dụ đổi trạng thái
 
