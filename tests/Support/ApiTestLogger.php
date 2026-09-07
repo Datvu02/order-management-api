@@ -7,11 +7,10 @@ use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 /**
- * Ghi lại request/response của mọi lời gọi API trong feature test kèm kết quả pass/fail
- * vào storage/logs/api-test.log.
+ * Ghi request/response của feature test ra terminal (STDERR) và storage/logs/api-test.log.
  *
- * Mỗi test được gom thành một block và chỉ ghi ra file khi đã biết kết quả, vì PHPUnit
- * gọi tearDown() trước onNotSuccessfulTest() nên không thể biết pass/fail ngay lúc test kết thúc.
+ * Block chỉ được in khi đã biết PASSED/FAILED. PHPUnit gọi tearDown() trước
+ * onNotSuccessfulTest(), nên flush được kích bởi ApiTestExtension sau khi test kết thúc.
  */
 final class ApiTestLogger
 {
@@ -42,6 +41,8 @@ final class ApiTestLogger
         self::$failure = null;
         self::$step = 0;
         self::$lines = [];
+
+        self::writeOut(PHP_EOL.str_repeat('=', 100).PHP_EOL.$test.PHP_EOL.str_repeat('-', 100).PHP_EOL);
     }
 
     public static function recordCall(string $method, string $uri, array $payload, TestResponse $response): void
@@ -53,16 +54,24 @@ final class ApiTestLogger
         $code = $response->getStatusCode();
         $reason = Response::$statusTexts[$code] ?? '';
 
-        self::$lines[] = sprintf('[%d] %s %s  ->  %d %s', ++self::$step, strtoupper($method), $uri, $code, $reason);
+        $chunk = [
+            sprintf('[%d] %s %s  ->  %d %s', ++self::$step, strtoupper($method), $uri, $code, $reason),
+        ];
 
         if ($payload !== []) {
-            self::$lines[] = '    request:';
-            self::$lines[] = self::indent(self::pretty(json_encode($payload)));
+            $chunk[] = '    request:';
+            $chunk[] = self::indent(self::pretty(json_encode($payload)));
         }
 
-        self::$lines[] = '    response:';
-        self::$lines[] = self::indent(self::pretty($response->getContent()));
-        self::$lines[] = '';
+        $chunk[] = '    response:';
+        $chunk[] = self::indent(self::pretty($response->getContent()));
+        $chunk[] = '';
+
+        foreach ($chunk as $line) {
+            self::$lines[] = $line;
+        }
+
+        self::writeOut(implode(PHP_EOL, $chunk).PHP_EOL);
     }
 
     public static function recordArtisan(string $command, array $parameters = []): void
@@ -72,8 +81,11 @@ final class ApiTestLogger
         }
 
         $suffix = $parameters === [] ? '' : ' '.json_encode($parameters);
-        self::$lines[] = sprintf('[%d] artisan %s%s', ++self::$step, $command, $suffix);
+        $line = sprintf('[%d] artisan %s%s', ++self::$step, $command, $suffix);
+
+        self::$lines[] = $line;
         self::$lines[] = '';
+        self::writeOut($line.PHP_EOL.PHP_EOL);
     }
 
     public static function markFailed(Throwable $e): void
@@ -108,7 +120,10 @@ final class ApiTestLogger
             $block[] = '';
         }
 
-        file_put_contents(self::path(), implode(PHP_EOL, $block).PHP_EOL, FILE_APPEND);
+        $text = implode(PHP_EOL, $block).PHP_EOL;
+
+        file_put_contents(self::path(), $text, FILE_APPEND);
+        self::writeOut(sprintf('%s  %s%s%s', $status, self::$currentTest, PHP_EOL, PHP_EOL));
 
         self::$currentTest = null;
         self::$lines = [];
@@ -128,15 +143,42 @@ final class ApiTestLogger
             mkdir($dir, 0777, true);
         }
 
-        file_put_contents(self::path(), sprintf(
-            'Feature test log - %s%s%s%s',
+        $header = sprintf(
+            'Feature test log - %s%sMoi block la mot test: trang thai, cac request da goi, response tra ve.%s',
             date('Y-m-d H:i:s'),
             PHP_EOL,
-            'Moi block la mot test: trang thai, cac request da goi, response tra ve.',
             PHP_EOL
-        ));
+        );
+
+        file_put_contents(self::path(), $header);
+        self::writeOut($header.PHP_EOL);
 
         register_shutdown_function([self::class, 'flush']);
+    }
+
+    /**
+     * In ra terminal ngay khi chạy `php artisan test`. PHPUnit bọc STDOUT trong
+     * output buffer nên fwrite thông thường bị giữ đến cuối test (Collision còn in
+     * pass/fail trước). Tạm nhấc buffer, ghi ra STDOUT thật, rồi đặt lại buffer.
+     */
+    private static function writeOut(string $text): void
+    {
+        $stacked = [];
+
+        while (ob_get_level() > 0) {
+            $stacked[] = ob_get_clean();
+        }
+
+        fwrite(STDOUT, $text);
+        flush();
+
+        foreach (array_reverse($stacked) as $chunk) {
+            ob_start();
+
+            if ($chunk !== false && $chunk !== '') {
+                echo $chunk;
+            }
+        }
     }
 
     private static function pretty(string|false|null $content): string

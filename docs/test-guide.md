@@ -20,74 +20,60 @@ php artisan test
 
 ## Xem response và kết quả của từng test
 
-Output mặc định của PHPUnit chỉ cho biết pass/fail, không cho thấy API thực sự trả về gì. Vì vậy mọi lời gọi API trong feature test được ghi lại vào `storage/logs/api-test.log`.
-
-File này **tự ghi mỗi lần chạy test**, không cần thêm cờ gì:
+`php artisan test` **in request/response ra terminal** ngay sau mỗi lời gọi API, rồi mới in dòng pass/fail của PHPUnit. Cùng nội dung được ghi vào `storage/logs/api-test.log`.
 
 ```powershell
 php artisan test
 ```
 
-Mỗi test là một block: trạng thái, các request đã gọi kèm payload, và response trả về:
+Đầu ra trông như sau:
 
 ```
 ====================================================================================================
-PASSED  Tests\Feature\OrderApiTest::test_paid_payment_auto_confirms_pending_order
+Tests\Feature\AuthApiTest::test_customer_cannot_create_product
 ----------------------------------------------------------------------------------------------------
-[1] POST /api/orders  ->  201 Created
+[1] POST /api/products  ->  403 Forbidden
     request:
       {
-          "warehouse_id": 1,
-          "items": [ { "product_id": 1, "quantity": 1 } ],
-          "payment": { "method": "cod" }
+          "sku": "X-001",
+          "name": "Blocked",
+          "price": 1000
       }
     response:
       {
-          "data": {
-              "order_number": "ORD2609072217552OC29E",
-              "status": "pending",
-              "total": "50000.00",
-              ...
-          }
+          "message": "Forbidden."
       }
+
+PASSED  Tests\Feature\AuthApiTest::test_customer_cannot_create_product
+
+   PASS  Tests\Feature\AuthApiTest
+  ✓ customer cannot create product
 ```
 
-Khi một test fail, block ghi luôn lý do fail **cùng với response thực tế đã gây ra nó** — đây là điểm hữu ích nhất khi debug:
+Khi test fail, log ghi luôn lý do **cùng response thực tế**:
 
 ```
-====================================================================================================
-FAILED  Tests\Feature\TempFailingTest::test_intentionally_failing_call
-----------------------------------------------------------------------------------------------------
-reason: Expected response status code [500] but received 200. Failed asserting that 200 is identical to 500.
-----------------------------------------------------------------------------------------------------
+FAILED  Tests\Feature\...
+reason: Expected response status code [500] but received 200.
 [1] GET /api/products  ->  200 OK
-    response:
-      {
-          "data": [],
-          "meta": { "current_page": 1, "per_page": 20, "total": 0 }
-      }
+    response: { "data": [], "meta": { ... } }
 ```
 
-Cơ chế: `Tests\TestCase` override `json()` — mọi helper `getJson`/`postJson`/`putJson`/`deleteJson` đều đi qua hàm này nên chỉ cần hook một chỗ. Lời gọi `$this->artisan(...)` cũng được ghi thành một bước. Kết quả pass/fail được ghi bằng `onNotSuccessfulTest()`, và block chỉ được đẩy ra file khi test tiếp theo bắt đầu — vì PHPUnit gọi `tearDown()` **trước** `onNotSuccessfulTest()` nên không thể biết pass/fail ngay lúc test vừa kết thúc.
+Cơ chế: `Tests\TestCase` override `json()` — `getJson`/`postJson`/`putJson`/`deleteJson` đều đi qua đây. `$this->artisan(...)` cũng được ghi thành một bước. PHPUnit gọi `tearDown()` trước `onNotSuccessfulTest()` nên dòng PASSED/FAILED được flush sau khi test kết thúc (`ApiTestExtension`).
 
-Log chứa 26 block, tương ứng 26 feature test. Hai unit test trong `OrderStatusTest` không xuất hiện vì chúng kế thừa `PHPUnit\Framework\TestCase` trực tiếp và không gọi HTTP.
+Hai unit test trong `OrderStatusTest` không in HTTP log vì chúng không gọi API.
 
-Muốn xem danh sách kết quả dạng gọn:
+Chỉ xem pass/fail gọn:
 
 ```powershell
 php artisan test --testdox
 ```
 
-Lọc nhanh trạng thái trong log:
-
-```powershell
-Select-String -Path storage\logs\api-test.log -Pattern "^(PASSED|FAILED)"
-```
-
-File log là UTF-8. Nếu mở bằng `Get-Content` trên PowerShell 5.1, ký tự tiếng Việt sẽ hiển thị sai do console codepage — bản thân file không lỗi. Dùng editor, hoặc đọc kèm encoding:
+File log (UTF-8) nếu cần xem lại sau:
 
 ```powershell
 Get-Content storage\logs\api-test.log -Encoding UTF8
+Select-String -Path storage\logs\api-test.log -Pattern "^(PASSED|FAILED)"
 ```
 
 ---
