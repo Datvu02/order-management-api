@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Events\OrderCreated;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Notifications\OrderCreatedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -63,6 +66,34 @@ class OrderApiTest extends TestCase
             ->assertCreated();
 
         Notification::assertSentTo($customer, OrderCreatedNotification::class);
+    }
+
+    public function test_order_created_event_is_dispatched(): void
+    {
+        Event::fake([OrderCreated::class]);
+
+        [$customer, $warehouse, $product] = $this->prepareCatalog(quantity: 5, price: 10000);
+
+        $this->actingAs($customer)
+            ->postJson('/api/orders', $this->orderPayload($warehouse, $product, 1))
+            ->assertCreated();
+
+        Event::assertDispatched(OrderCreated::class);
+    }
+
+    public function test_order_creation_is_rate_limited(): void
+    {
+        config(['app.order_rate_limit' => 2]);
+
+        [$customer, $warehouse, $product] = $this->prepareCatalog(quantity: 50, price: 1000);
+        $payload = $this->orderPayload($warehouse, $product, 1);
+
+        $this->actingAs($customer)->postJson('/api/orders', $payload)->assertCreated();
+        $this->actingAs($customer)->postJson('/api/orders', $payload)->assertCreated();
+
+        $this->actingAs($customer)
+            ->postJson('/api/orders', $payload)
+            ->assertStatus(Response::HTTP_TOO_MANY_REQUESTS);
     }
 
     public function test_cannot_create_order_when_stock_is_insufficient(): void
