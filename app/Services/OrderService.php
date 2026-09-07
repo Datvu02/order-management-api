@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Events\OrderCreated;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
@@ -41,7 +42,7 @@ class OrderService
     public function create(User $customer, array $payload): Order
     {
         try {
-            return DB::transaction(function () use ($customer, $payload) {
+            $order = DB::transaction(function () use ($customer, $payload) {
                 $warehouse = $this->assertWarehouse((int) $payload['warehouse_id']);
                 $items = $this->assertProducts($payload['items']);
 
@@ -82,6 +83,10 @@ class OrderService
 
                 return $order->load(['items', 'warehouse', 'user', 'payments', 'statusHistories']);
             }, self::DEADLOCK_RETRIES);
+
+            OrderCreated::dispatch($order);
+
+            return $order;
         } catch (HttpExceptionInterface $e) {
             throw $e;
         } catch (Throwable $e) {

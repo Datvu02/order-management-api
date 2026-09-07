@@ -9,7 +9,9 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Notifications\OrderCreatedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OrderApiTest extends TestCase
@@ -48,6 +50,19 @@ class OrderApiTest extends TestCase
             'order_id' => $orderId,
             'to_status' => OrderStatus::Pending->value,
         ]);
+    }
+
+    public function test_creating_order_notifies_the_customer(): void
+    {
+        Notification::fake();
+
+        [$customer, $warehouse, $product] = $this->prepareCatalog(quantity: 5, price: 10000);
+
+        $this->actingAs($customer)
+            ->postJson('/api/orders', $this->orderPayload($warehouse, $product, 1))
+            ->assertCreated();
+
+        Notification::assertSentTo($customer, OrderCreatedNotification::class);
     }
 
     public function test_cannot_create_order_when_stock_is_insufficient(): void
