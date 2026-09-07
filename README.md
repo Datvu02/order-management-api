@@ -68,6 +68,10 @@ php artisan serve
 | staff    | staff@example.com     | password |
 | customer | customer@example.com  | password |
 
+Ngoài ra còn 7 khách hàng phụ (`bich@example.com` … `lan@example.com`), cùng mật khẩu.
+
+Seed tạo 20 sản phẩm, 3 kho và 62 đơn hàng phủ đủ 8 trạng thái, kèm các case biên (hết hàng, kho tạm đóng, hàng tồn 3 năm). Chi tiết dataset và kịch bản test thủ công: `docs/test-data.md`.
+
 Header xác thực: `Authorization: Bearer {token}`
 
 ## Mô hình dữ liệu
@@ -199,4 +203,5 @@ docker compose run --rm app php artisan test
 Hoặc `php artisan test` nếu chạy trực tiếp trên máy. Hiện có 28 test / 118 assertions.
 
 - `docs/test-guide.md` — cách chạy test theo từng mục yêu cầu, kèm lệnh `--filter` và kết quả kỳ vọng.
+- `docs/test-data.md` — dữ liệu mẫu và kịch bản test thủ công qua API.
 - `docs/feature-and-unit-tests.md` — danh sách case chi tiết.
