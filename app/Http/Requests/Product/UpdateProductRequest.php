@@ -24,4 +24,15 @@ class UpdateProductRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
+
+    public function payload(): array
+    {
+        return $this->safe()->only([
+            'sku',
+            'name',
+            'description',
+            'price',
+            'is_active',
+        ]);
+    }
 }

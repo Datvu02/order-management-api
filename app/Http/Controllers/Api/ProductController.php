@@ -3,55 +3,64 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\IndexProductRequest;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
+use App\Http\Resources\ProductCollection;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class ProductController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexProductRequest $request): ProductCollection
     {
-        $products = Product::query()
-            ->when($request->boolean('active_only'), fn ($q) => $q->where('is_active', true))
-            ->when($request->filled('q'), function ($q) use ($request) {
-                $term = '%'.$request->string('q').'%';
-                $q->where(fn ($inner) => $inner->where('name', 'like', $term)->orWhere('sku', 'like', $term));
-            })
-            ->latest()
-            ->paginate(20);
+        $filters = $request->filters();
 
-        return ProductResource::collection($products);
+        $products = Product::query()
+            ->when(isset($filters['is_active']), fn ($q) => $q->where('is_active', $filters['is_active']))
+            ->when(isset($filters['q']), function ($q) use ($filters) {
+                $term = '%'.$filters['q'].'%';
+                $q->where(function ($inner) use ($term) {
+                    $inner->where('name', 'like', $term)->orWhere('sku', 'like', $term);
+                });
+            })
+            ->latest('id')
+            ->paginate($request->perPage());
+
+        return new ProductCollection($products);
     }
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = Product::query()->create($request->validated());
+        $product = Product::query()->create($request->payload());
 
         return (new ProductResource($product))
             ->response()
-            ->setStatusCode(201);
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Product $product): ProductResource
+    public function show(Product $product): JsonResponse
     {
-        return new ProductResource($product);
+        return (new ProductResource($product))
+            ->response()
+            ->setStatusCode(Response::HTTP_OK);
     }
 
-    public function update(UpdateProductRequest $request, Product $product): ProductResource
+    public function update(UpdateProductRequest $request, Product $product): JsonResponse
     {
-        $product->update($request->validated());
+        $product->update($request->payload());
 
-        return new ProductResource($product);
+        return (new ProductResource($product->refresh()))
+            ->response()
+            ->setStatusCode(Response::HTTP_OK);
     }
 
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Product $product): Response
     {
         $product->delete();
 
-        return response()->json(['message' => 'Product deleted.']);
+        return response()->noContent();
     }
 }
