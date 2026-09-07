@@ -1,0 +1,169 @@
+# Order Management API
+
+Laravel 11 API-only cho hệ thống quản lý đơn hàng thương mại điện tử.
+
+## Yêu cầu
+
+- PHP 8.2+
+- Composer
+- MySQL 8 (hoặc MariaDB 10.4+)
+- Extension: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`
+
+## Cài đặt
+
+```bash
+cd order-management-api
+composer install
+copy .env.example .env
+php artisan key:generate
+```
+
+Tạo database MySQL `order_management`, rồi chỉnh `DB_*` trong `.env`:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=order_management
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+```bash
+php artisan migrate --seed
+php artisan serve
+```
+
+API chạy tại `http://127.0.0.1:8000/api`.
+
+## Tài khoản mẫu (sau `migrate --seed`)
+
+| Role     | Email                 | Password |
+|----------|-----------------------|----------|
+| admin    | admin@example.com     | password |
+| staff    | staff@example.com     | password |
+| customer | customer@example.com  | password |
+
+Header xác thực: `Authorization: Bearer {token}`
+
+## Mô hình dữ liệu
+
+```text
+users 1──* orders 1──* order_items *──1 products
+                │
+                ├──* payments
+                ├──* order_status_history
+                └──* warehouses 1──* inventories *──1 products
+```
+
+### Bảng
+
+| Bảng | Mục đích |
+|------|----------|
+| `users` | Khách hàng, nhân viên, admin |
+| `products` | Sản phẩm (SKU, giá) |
+| `warehouses` | Kho hàng |
+| `inventories` | Tồn kho theo kho + sản phẩm (`quantity`) |
+| `orders` | Đơn hàng |
+| `order_items` | Chi tiết đơn (snapshot tên/SKU/giá) |
+| `payments` | Thanh toán của đơn |
+| `order_status_history` | Lịch sử đổi trạng thái |
+
+## Luồng nghiệp vụ
+
+**Tồn kho**
+
+1. Tạo đơn: khóa dòng tồn kho (`SELECT ... FOR UPDATE`), kiểm tra rồi trừ `quantity` trong 1 transaction (retry khi deadlock)
+2. Hủy / hoàn tiền: cộng lại `quantity`
+
+**Trạng thái đơn**
+
+`pending` → `confirmed` → `processing` → `packed` → `shipped` → `delivered` → `refunded`
+
+Có thể `cancelled` từ `pending` / `confirmed` / `processing` / `packed`.
+
+Thanh toán đủ (`payments.status = paid` và tổng ≥ `orders.total`) sẽ tự chuyển đơn `pending` → `confirmed`.
+
+## API
+
+### Auth
+
+| Method | Path | Auth |
+|--------|------|------|
+| POST | `/api/auth/register` | Public |
+| POST | `/api/auth/login` | Public |
+| GET | `/api/auth/me` | Token |
+| POST | `/api/auth/logout` | Token |
+
+### Catalog & kho
+
+| Method | Path | Auth |
+|--------|------|------|
+| GET | `/api/products` | Public |
+| POST / PUT / DELETE | `/api/products` | admin, staff |
+| GET | `/api/warehouses` | Public |
+| POST / PUT / DELETE | `/api/warehouses` | admin, staff |
+| GET / POST / PUT | `/api/inventories` | admin, staff |
+
+### Đơn hàng & thanh toán
+
+| Method | Path | Auth |
+|--------|------|------|
+| GET / POST | `/api/orders` | Token (customer chỉ thấy đơn của mình) |
+| GET | `/api/orders/{id}` | Token |
+| POST | `/api/orders/{id}/status` | admin, staff |
+| POST | `/api/orders/{id}/cancel` | Chủ đơn hoặc staff |
+| GET / POST | `/api/orders/{id}/payments` | Token |
+| GET | `/api/payments/{id}` | Token |
+| GET | `/api/users` | admin |
+
+### Ví dụ tạo đơn
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/orders ^
+  -H "Authorization: Bearer TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"warehouse_id\":1,\"shipping_name\":\"Nguyen Van A\",\"shipping_phone\":\"0901234567\",\"shipping_address\":\"1 Nguyen Hue, Q1\",\"items\":[{\"product_id\":1,\"quantity\":2}]}"
+```
+
+### Ví dụ đổi trạng thái
+
+```json
+{ "status": "confirmed", "note": "Da xac nhan don" }
+```
+
+Giá trị `status`: `pending`, `confirmed`, `processing`, `packed`, `shipped`, `delivered`, `cancelled`, `refunded`.
+
+### Ví dụ thanh toán
+
+```json
+{
+  "amount": 300000,
+  "method": "bank_transfer",
+  "status": "paid",
+  "transaction_id": "TXN-001"
+}
+```
+
+`method`: `cod`, `bank_transfer`, `ewallet`, `card`  
+`status`: `pending`, `paid`, `failed`, `refunded`
+
+## Cấu trúc chính
+
+```text
+app/
+  Enums/           OrderStatus, Payment*, UserRole
+  Http/Controllers/Api/
+  Http/Requests/
+  Http/Resources/
+  Models/
+  Services/        OrderService, InventoryService
+database/migrations/
+routes/api.php
+```
+
+## Test
+
+```bash
+php artisan test
+```
