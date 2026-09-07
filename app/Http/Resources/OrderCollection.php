@@ -7,21 +7,18 @@ use Illuminate\Http\Resources\Json\ResourceCollection;
 
 class OrderCollection extends ResourceCollection
 {
-    public static $wrap = null;
-
     public $collects = OrderResource::class;
 
-    public function toArray(Request $request): array
+    public function paginationInformation(Request $request, array $paginated, array $default): array
     {
         return [
-            'data' => $this->collection,
             'meta' => [
-                'current_page' => $this->resource->currentPage(),
-                'from' => $this->resource->firstItem(),
-                'last_page' => $this->resource->lastPage(),
-                'per_page' => $this->resource->perPage(),
-                'to' => $this->resource->lastItem(),
-                'total' => $this->resource->total(),
+                'current_page' => $paginated['current_page'],
+                'from' => $paginated['from'],
+                'last_page' => $paginated['last_page'],
+                'per_page' => $paginated['per_page'],
+                'to' => $paginated['to'],
+                'total' => $paginated['total'],
             ],
         ];
     }
