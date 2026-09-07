@@ -14,10 +14,10 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('warehouse_id');
             $table->string('status', 32)->default('pending');
-            $table->unsignedDecimal('subtotal', 12, 2)->default(0);
-            $table->unsignedDecimal('shipping_fee', 12, 2)->default(0);
-            $table->unsignedDecimal('discount', 12, 2)->default(0);
-            $table->unsignedDecimal('total', 12, 2)->default(0);
+            $table->decimal('subtotal', 12, 2)->default(0);
+            $table->decimal('shipping_fee', 12, 2)->default(0);
+            $table->decimal('discount', 12, 2)->default(0);
+            $table->decimal('total', 12, 2)->default(0);
             $table->string('shipping_name', 255);
             $table->string('shipping_phone', 20);
             $table->text('shipping_address');

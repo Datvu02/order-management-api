@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_id');
-            $table->unsignedDecimal('amount', 12, 2);
+            $table->decimal('amount', 12, 2);
             $table->string('method', 32);
             $table->string('status', 32)->default('pending');
             $table->string('transaction_id', 100)->nullable();
