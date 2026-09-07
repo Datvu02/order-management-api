@@ -25,21 +25,10 @@ Index `(user_id, status)` **không đủ** cho câu này. MySQL có thể dùng 
 
 ## Đề xuất
 
-1. **Không dùng `get()` cho danh sách.** Dùng `paginate()` hoặc cursor pagination (`orderBy('id', 'desc')->cursorPaginate()`) để chỉ đọc một trang (ví dụ 20 dòng). API `GET /api/orders` đã làm theo hướng này.
+1. **Không dùng** `get()` **cho danh sách.** Dùng `paginate()` hoặc cursor pagination (`orderBy('id', 'desc')->cursorPaginate()`) để chỉ đọc một trang (ví dụ 20 dòng). API `GET /api/orders` đã làm theo hướng này.
 2. **Index đúng query:** `(user_id, status, created_at)`. Migration `0001_01_01_000008_add_orders_user_status_created_at_index` bổ sung index này.
 3. **Chỉ select cột cần** trên list; eager load `items`, `warehouse` bằng `with()` và cột cụ thể — không load `statusHistories` trên list.
 4. **Filter có cấu trúc** (`status`, `warehouse_id`, `from`, `to`) để thu hẹp range trước khi sort.
 5. Khi cần “toàn bộ lịch sử” (export): chạy job queue, đọc theo chunk/`lazy()`, ghi file — không trả JSON một phát.
 6. Quy mô lớn hơn: read replica cho list, partition `orders` theo `created_at`, cache trang đầu theo `user_id + status`.
 
-## Câu nên dùng (minh họa)
-
-```php
-Order::query()
-    ->select(['id', 'order_number', 'user_id', 'warehouse_id', 'status', 'total', 'created_at'])
-    ->with(['items:id,order_id,product_id,quantity,total_price', 'warehouse:id,code,name'])
-    ->where('user_id', $userId)
-    ->where('status', 'delivered')
-    ->orderByDesc('created_at')
-    ->paginate(20);
-```

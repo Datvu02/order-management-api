@@ -1,5 +1,8 @@
 /.phpunit.cache
+/composer.phar
+/database/*.sqlite
 /node_modules
+/php.local.ini
 /public/build
 /public/hot
 /public/storage
