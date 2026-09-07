@@ -32,6 +32,12 @@ Dừng: `docker compose down` (thêm `-v` để xóa luôn dữ liệu MySQL).
 
 Cần PHP 8.2+, Composer, MySQL 8 (hoặc MariaDB 10.4+), extension `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`.
 
+Bản PHP cài qua winget không kèm `php.ini` nên không load extension nào. Nếu gặp lỗi thiếu extension (`mb_split()`, `pdo_sqlite`...), tạo một file ini rồi trỏ `PHPRC` vào đó — biến này áp dụng cho cả các sub-process mà Composer/Artisan spawn:
+
+```powershell
+$env:PHPRC = "$PWD\php.local.ini"
+```
+
 ```bash
 composer install
 copy .env.example .env
