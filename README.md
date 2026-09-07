@@ -202,6 +202,8 @@ docker compose run --rm app php artisan test
 
 Hoặc `php artisan test` nếu chạy trực tiếp trên máy. Hiện có 28 test / 118 assertions.
 
+Mỗi lần chạy test, request/response và kết quả pass/fail của từng feature test được ghi vào `storage/logs/api-test.log` để xem API thực sự trả về gì.
+
 - `docs/test-guide.md` — cách chạy test theo từng mục yêu cầu, kèm lệnh `--filter` và kết quả kỳ vọng.
 - `docs/test-data.md` — dữ liệu mẫu và kịch bản test thủ công qua API.
 - `docs/feature-and-unit-tests.md` — danh sách case chi tiết.
