@@ -8,14 +8,9 @@ Tổng: **28 test, 118 assertions**, tất cả pass.
 
 Test dùng SQLite in-memory, không cần MySQL hay Redis. `phpunit.xml` đã set sẵn `APP_KEY`, `DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`, `CACHE_STORE=array`, `MAIL_MAILER=array`.
 
-Bản PHP cài qua winget không có `php.ini` nên phải trỏ `PHPRC`, nếu không Artisan sẽ lỗi thiếu `mbstring`:
+Mọi lệnh dưới đây chạy nguyên văn. Nếu dùng Docker thì thay `php artisan` bằng `docker compose run --rm app php artisan`.
 
-```powershell
-Set-Alias php "C:\Users\UyenVT\AppData\Local\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\php.exe"
-$env:PHPRC = "$PWD\php.local.ini"
-```
-
-Sau đó mọi lệnh dưới đây chạy nguyên văn. Nếu dùng Docker thì thay `php artisan` bằng `docker compose run --rm app php artisan`.
+Nếu gặp lỗi `Call to undefined function Illuminate\Support\mb_split()` (hoặc thiếu `pdo_sqlite`), xem phần "PHP cài qua winget" trong `README.md` — nguyên nhân là PHP chưa load `php.ini` nên không có extension nào.
 
 Chạy toàn bộ:
 

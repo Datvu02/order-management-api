@@ -32,7 +32,37 @@ Dừng: `docker compose down` (thêm `-v` để xóa luôn dữ liệu MySQL).
 
 Cần PHP 8.2+, Composer, MySQL 8 (hoặc MariaDB 10.4+), extension `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`.
 
-Bản PHP cài qua winget không kèm `php.ini` nên không load extension nào. Nếu gặp lỗi thiếu extension (`mb_split()`, `pdo_sqlite`...), tạo một file ini rồi trỏ `PHPRC` vào đó — biến này áp dụng cho cả các sub-process mà Composer/Artisan spawn:
+### PHP cài qua winget
+
+Bản PHP cài bằng `winget` **không kèm `php.ini`**, nên không extension nào được load và mọi lệnh Artisan/Composer sẽ lỗi:
+
+```
+Call to undefined function Illuminate\Support\mb_split()
+```
+
+Kiểm tra bằng `php --ini` — nếu thấy `Loaded Configuration File: (none)` thì đúng là lỗi này.
+
+Cách sửa: tạo file `php.ini` **ngay cạnh `php.exe`** (PHP tự đọc, không cần biến môi trường). Tìm đường dẫn bằng `where.exe php`, rồi tạo file với nội dung:
+
+```ini
+extension_dir = "<thu-muc-chua-php.exe>\ext"
+
+extension=curl
+extension=fileinfo
+extension=mbstring
+extension=openssl
+extension=pdo_mysql
+extension=pdo_sqlite
+extension=sqlite3
+extension=zip
+
+date.timezone = Asia/Ho_Chi_Minh
+memory_limit = 512M
+```
+
+Sau đó `php artisan test` chạy được ở mọi terminal. Nếu nâng cấp PHP qua winget làm mất file này thì tạo lại là xong.
+
+Cách tạm thời cho một session (không cần sửa gì): trỏ `PHPRC` vào một file ini bất kỳ — biến này áp dụng cho cả các sub-process mà Composer/Artisan spawn.
 
 ```powershell
 $env:PHPRC = "$PWD\php.local.ini"
